@@ -1,1 +1,18 @@
-[]
+[
+  {
+    "id": "db04ff97-3f57-4131-bf4b-3adf9f835247",
+    "title": "grocery pickup",
+    "description": "tomato\npotato",
+    "dueDate": "2026-06-16",
+    "completed": false,
+    "createdAt": "2026-06-04T19:20:54.427Z"
+  },
+  {
+    "id": "58d6c6a2-b0e8-4218-9441-144e3b485854",
+    "title": "dsa",
+    "description": "array\nstring",
+    "dueDate": "2026-06-10",
+    "completed": false,
+    "createdAt": "2026-06-04T19:22:01.286Z"
+  }
+]
