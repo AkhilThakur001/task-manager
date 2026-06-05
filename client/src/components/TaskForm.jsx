@@ -7,17 +7,29 @@ function TaskForm({ onAdd }) {
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!title.trim()) {
-      setError('Title is required');
-      return;
-    }
-    setError('');
-    await onAdd({ title, description, dueDate });
-    setTitle('');
-    setDescription('');
-    setDueDate('');
-  };
+  e.preventDefault();
+  
+  if (!title.trim()) {
+    setError('Title is required');
+    return;
+  }
+
+  if (title.trim().length > 200) {
+    setError('Title must be under 200 characters');
+    return;
+  }
+
+  if (description.length > 1000) {
+    setError('Description must be under 1000 characters');
+    return;
+  }
+
+  setError('');
+  await onAdd({ title, description, dueDate });
+  setTitle('');
+  setDescription('');
+  setDueDate('');
+};
 
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow p-5 mb-6">

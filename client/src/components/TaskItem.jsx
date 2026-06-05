@@ -1,10 +1,27 @@
 import { useState } from 'react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 function TaskItem({ task, onToggle, onDelete, onEdit }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
   const [editDescription, setEditDescription] = useState(task.description);
   const [editDueDate, setEditDueDate] = useState(task.dueDate || '');
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
 
   const isOverdue = task.dueDate && !task.completed && new Date(task.dueDate) < new Date();
 
@@ -25,11 +42,13 @@ function TaskItem({ task, onToggle, onDelete, onEdit }) {
   };
 
   return (
-    <div className={`bg-white rounded-xl shadow p-4 mb-3 border-l-4 transition
-      ${task.completed ? 'border-green-400' : isOverdue ? 'border-red-400' : 'border-blue-400'}`}
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`bg-white rounded-xl shadow p-4 mb-3 border-l-4 transition
+        ${task.completed ? 'border-green-400' : isOverdue ? 'border-red-400' : 'border-blue-400'}`}
     >
       {isEditing ? (
-        // Edit mode
         <div className="flex flex-col gap-2">
           <input
             type="text"
@@ -65,8 +84,18 @@ function TaskItem({ task, onToggle, onDelete, onEdit }) {
           </div>
         </div>
       ) : (
-        // View mode
         <div className="flex items-start gap-3">
+
+          {/* Drag handle */}
+          <div
+            {...attributes}
+            {...listeners}
+            className="mt-1 cursor-grab text-gray-300 hover:text-gray-500 select-none"
+            title="Drag to reorder"
+          >
+            ⠿
+          </div>
+
           {/* Checkbox */}
           <input
             type="checkbox"

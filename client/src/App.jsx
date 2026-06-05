@@ -11,7 +11,6 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Fetch tasks on load
   useEffect(() => {
     fetchTasks();
   }, []);
@@ -22,7 +21,7 @@ function App() {
       const data = await getTasks();
       setTasks(data);
     } catch (err) {
-      setError('Failed to load tasks. Is the server running?');
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -33,8 +32,12 @@ function App() {
       const newTask = await createTask(taskData);
       setTasks((prev) => [newTask, ...prev]);
     } catch (err) {
-      setError('Failed to add task.');
+      setError(err.message);
     }
+  };
+
+  const handleReorder = (reorderedTasks) => {
+    setTasks(reorderedTasks);
   };
 
   const handleToggle = async (id, completed) => {
@@ -42,7 +45,7 @@ function App() {
       const updated = await updateTask(id, { completed });
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)));
     } catch (err) {
-      setError('Failed to update task.');
+      setError(err.message);
     }
   };
 
@@ -51,7 +54,7 @@ function App() {
       const updated = await updateTask(id, updates);
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)));
     } catch (err) {
-      setError('Failed to edit task.');
+      setError(err.message);
     }
   };
 
@@ -60,11 +63,10 @@ function App() {
       await deleteTask(id);
       setTasks((prev) => prev.filter((t) => t.id !== id));
     } catch (err) {
-      setError('Failed to delete task.');
+      setError(err.message);
     }
   };
 
-  // Filter + search logic
   const filteredTasks = tasks
     .filter((t) => {
       if (filter === 'active') return !t.completed;
@@ -73,8 +75,15 @@ function App() {
     })
     .filter((t) =>
       t.title.toLowerCase().includes(search.toLowerCase())
-    );
-
+    )
+    .sort((a, b) => {
+      if (!search) return 0;
+      const aStarts = a.title.toLowerCase().startsWith(search.toLowerCase());
+      const bStarts = b.title.toLowerCase().startsWith(search.toLowerCase());
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+      return 0;
+    });
   const activeCount = tasks.filter((t) => !t.completed).length;
   const completedCount = tasks.filter((t) => t.completed).length;
 
@@ -90,9 +99,14 @@ function App() {
 
         {/* Error banner */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 rounded-lg px-4 py-3 mb-4 text-sm">
-            {error}
-            <button onClick={() => setError('')} className="ml-2 font-bold">✕</button>
+          <div className="bg-red-50 border border-red-200 text-red-600 rounded-lg px-4 py-3 mb-4 text-sm flex justify-between items-center">
+            <span>⚠ {error}</span>
+            <button
+              onClick={() => setError('')}
+              className="ml-4 font-bold hover:text-red-800"
+            >
+              ✕
+            </button>
           </div>
         )}
 
@@ -121,6 +135,7 @@ function App() {
             onToggle={handleToggle}
             onDelete={handleDelete}
             onEdit={handleEdit}
+            onReorder={handleReorder}
           />
         )}
 
