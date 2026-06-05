@@ -3,8 +3,9 @@
 A full-stack personal task manager built with Node.js + Express on the backend and React on the frontend. Users can create, view, update, and delete tasks, filter by status, search by title, and see overdue tasks highlighted.
 
 ## Live Demo
-- Frontend: (coming soon)
-- Backend: (coming soon)
+## Live Demo
+- Frontend: https://task-manager-1hnc0yrui-akhilthakur001s-projects.vercel.app
+- Backend: https://task-manager-api-t14k.onrender.com
 
 ## Tech Stack
 
