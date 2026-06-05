@@ -10,6 +10,7 @@ function App() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isManualOrder, setIsManualOrder] = useState(false);
 
   useEffect(() => {
     fetchTasks();
@@ -37,6 +38,7 @@ function App() {
   };
 
   const handleReorder = (reorderedTasks) => {
+    setIsManualOrder(true);
     setTasks(reorderedTasks);
   };
 
@@ -77,13 +79,24 @@ function App() {
       t.title.toLowerCase().includes(search.toLowerCase())
     )
     .sort((a, b) => {
-      if (!search) return 0;
-      const aStarts = a.title.toLowerCase().startsWith(search.toLowerCase());
-      const bStarts = b.title.toLowerCase().startsWith(search.toLowerCase());
-      if (aStarts && !bStarts) return -1;
-      if (!aStarts && bStarts) return 1;
-      return 0;
+      // If searching, prioritize title starts-with matches first
+      if (search) {
+        const aStarts = a.title.toLowerCase().startsWith(search.toLowerCase());
+        const bStarts = b.title.toLowerCase().startsWith(search.toLowerCase());
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+      }
+
+      // If user manually reordered, respect that order
+      if (isManualOrder) return 0;
+
+      // Default: sort by due date (earliest first, no due date at bottom)
+      if (!a.dueDate && !b.dueDate) return 0;
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      return new Date(a.dueDate) - new Date(b.dueDate);
     });
+
   const activeCount = tasks.filter((t) => !t.completed).length;
   const completedCount = tasks.filter((t) => t.completed).length;
 
@@ -122,6 +135,19 @@ function App() {
           activeCount={activeCount}
           completedCount={completedCount}
         />
+
+        {/* Sort indicator */}
+        <div className="flex justify-between items-center mb-3 text-xs text-gray-400">
+          <span>{isManualOrder ? '📌 Custom order' : '📅 Sorted by due date'}</span>
+          {isManualOrder && (
+            <button
+              onClick={() => setIsManualOrder(false)}
+              className="text-blue-400 hover:text-blue-600 transition"
+            >
+              Reset to due date order
+            </button>
+          )}
+        </div>
 
         {/* Task list */}
         {loading ? (
