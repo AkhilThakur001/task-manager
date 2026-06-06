@@ -1,3 +1,4 @@
+// v2 - with drag handle
 import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
