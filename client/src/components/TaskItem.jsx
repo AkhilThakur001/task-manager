@@ -90,11 +90,11 @@ function TaskItem({ task, onToggle, onDelete, onEdit }) {
           <div
             {...attributes}
             {...listeners}
-            className="mt-1 cursor-grab text-gray-300 hover:text-gray-500 select-none"
+            className="mt-1 cursor-grab text-gray-400 hover:text-gray-600 select-none text-lg font-bold"
             title="Drag to reorder"
           >
-            ⠿
-          </div>
+          ⠿
+        </div>
 
           {/* Checkbox */}
           <input
