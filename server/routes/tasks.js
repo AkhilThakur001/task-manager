@@ -13,7 +13,6 @@ function readTasks() {
     if (!Array.isArray(parsed)) return [];
     return parsed;
   } catch (err) {
-    // If file is missing or corrupted, return empty array
     return [];
   }
 }
@@ -26,11 +25,26 @@ function writeTasks(tasks) {
   }
 }
 
-// GET /api/tasks
 router.get('/', (req, res) => {
   try {
     const tasks = readTasks();
-    tasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const hasOrder = tasks.some((t) => t.order !== undefined && t.order !== -1);
+
+    if (hasOrder) {
+      tasks.sort((a, b) => {
+        if (a.order === -1 || a.order === undefined) return 1;
+        if (b.order === -1 || b.order === undefined) return -1;
+        return a.order - b.order;
+      });
+    } else {
+      tasks.sort((a, b) => {
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(a.dueDate) - new Date(b.dueDate);
+      });
+    }
+
     res.json(tasks);
   } catch (err) {
     res.status(500).json({ error: 'Failed to read tasks' });
@@ -42,22 +56,18 @@ router.post('/', (req, res) => {
   try {
     const { title, description, dueDate } = req.body;
 
-    // Validate title
     if (!title || typeof title !== 'string' || title.trim() === '') {
       return res.status(400).json({ error: 'Title is required and must be a non-empty string' });
     }
 
-    // Validate title length
     if (title.trim().length > 200) {
       return res.status(400).json({ error: 'Title must be under 200 characters' });
     }
 
-    // Validate description length
     if (description && description.length > 1000) {
       return res.status(400).json({ error: 'Description must be under 1000 characters' });
     }
 
-    // Validate due date format
     if (dueDate && isNaN(new Date(dueDate).getTime())) {
       return res.status(400).json({ error: 'Invalid due date format' });
     }
@@ -81,12 +91,45 @@ router.post('/', (req, res) => {
   }
 });
 
+// POST /api/tasks/reorder — MUST be before /:id routes
+router.post('/reorder', (req, res) => {
+  try {
+    const { orderedIds } = req.body;
+
+    if (!Array.isArray(orderedIds)) {
+      return res.status(400).json({ error: 'orderedIds must be an array' });
+    }
+
+    const tasks = readTasks();
+
+    // If empty array, clear all orders (reset to due date)
+    if (orderedIds.length === 0) {
+      const reset = tasks.map((task) => {
+        const { order, ...rest } = task;
+        return rest;
+      });
+      writeTasks(reset);
+      return res.json({ message: 'Order reset successfully' });
+    }
+
+    // Assign order index to each task
+    const reordered = tasks.map((task) => ({
+      ...task,
+      order: orderedIds.indexOf(task.id),
+    }));
+
+    writeTasks(reordered);
+    res.json({ message: 'Order saved successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Failed to save order' });
+  }
+});
+
 // PATCH /api/tasks/:id
 router.patch('/:id', (req, res) => {
   try {
     const { id } = req.params;
 
-    // Validate id format
     if (!id || id.trim() === '') {
       return res.status(400).json({ error: 'Invalid task ID' });
     }
@@ -100,7 +143,6 @@ router.patch('/:id', (req, res) => {
 
     const { title, description, dueDate, completed } = req.body;
 
-    // Validate title if provided
     if (title !== undefined) {
       if (typeof title !== 'string' || title.trim() === '') {
         return res.status(400).json({ error: 'Title must be a non-empty string' });
@@ -110,17 +152,14 @@ router.patch('/:id', (req, res) => {
       }
     }
 
-    // Validate completed if provided
     if (completed !== undefined && typeof completed !== 'boolean') {
       return res.status(400).json({ error: 'Completed must be a boolean' });
     }
 
-    // Validate due date if provided
     if (dueDate && isNaN(new Date(dueDate).getTime())) {
       return res.status(400).json({ error: 'Invalid due date format' });
     }
 
-    // Only update allowed fields
     const allowedUpdates = { title, description, dueDate, completed };
     Object.keys(allowedUpdates).forEach(
       (key) => allowedUpdates[key] === undefined && delete allowedUpdates[key]

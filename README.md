@@ -66,3 +66,77 @@ Frontend runs on http://localhost:5173
 ```
 
 ## Project Structure
+
+```text
+task-manager/
+│
+├── client/                          # React Frontend (Vite)
+│   ├── public/
+│   │   ├── favicon.svg
+│   │   └── icons.svg
+│   │
+│   ├── src/
+│   │   ├── api/
+│   │   │   └── tasks.js            # API service functions
+│   │   │
+│   │   ├── assets/
+│   │   │   ├── hero.png
+│   │   │   ├── react.svg
+│   │   │   └── vite.svg
+│   │   │
+│   │   ├── components/
+│   │   │   ├── FilterBar.jsx       # Search and filtering controls
+│   │   │   ├── TaskForm.jsx        # Create/Edit task form
+│   │   │   ├── TaskItem.jsx        # Individual task component
+│   │   │   └── TaskList.jsx        # Task list container
+│   │   │
+│   │   ├── App.jsx                 # Main application logic
+│   │   ├── App.css                 # Application styles
+│   │   ├── index.css               # Global styles
+│   │   └── main.jsx                # React entry point
+│   │
+│   ├── package.json
+│   └── vite.config.js
+│
+├── server/                          # Express Backend
+│   ├── data/
+│   │   └── tasks.json              # Local JSON database
+│   │
+│   ├── routes/
+│   │   └── tasks.js                # Task CRUD API routes
+│   │
+│   ├── index.js                    # Express server entry point
+│   └── package.json
+│
+├── .gitignore
+└── README.md
+```
+
+### Frontend Responsibilities
+
+* Task creation and editing interface
+* Task filtering (All, Active, Completed)
+* Search functionality
+* Drag-and-drop task reordering
+* Due date management
+* Responsive user interface
+
+### Backend Responsibilities
+
+* RESTful API endpoints
+* Task validation
+* CRUD operations
+* Persistent storage using JSON file
+* Error handling and route management
+
+### Data Flow
+
+1. User interacts with React UI.
+2. Frontend sends API requests using Axios/Fetch.
+3. Express server processes requests.
+4. Tasks are stored in `tasks.json`.
+5. Updated data is returned to the frontend.
+6. UI automatically refreshes with latest task state.
+
+```
+```

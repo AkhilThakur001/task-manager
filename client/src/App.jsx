@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getTasks, createTask, updateTask, deleteTask } from './api/tasks';
+import { getTasks, createTask, updateTask, deleteTask, reorderTasks } from './api/tasks';
 import TaskForm from './components/TaskForm';
 import TaskList from './components/TaskList';
 import FilterBar from './components/FilterBar';
@@ -11,18 +11,31 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isManualOrder, setIsManualOrder] = useState(false);
+  const [slowLoad, setSlowLoad] = useState(false);
 
   useEffect(() => {
     fetchTasks();
   }, []);
 
-  const fetchTasks = async () => {
+  const fetchTasks = async (retryCount = 0) => {
     try {
       setLoading(true);
+      setSlowLoad(false);
+      const slowTimer = setTimeout(() => setSlowLoad(true), 3000);
       const data = await getTasks();
+      clearTimeout(slowTimer);
+      setSlowLoad(false);
       setTasks(data);
+      const hasManualOrder = data.some((t) => t.order !== undefined && t.order !== -1);
+      setIsManualOrder(hasManualOrder);
     } catch (err) {
-      setError(err.message);
+      if (retryCount < 1) {
+        console.log('Retrying fetch...');
+        fetchTasks(retryCount + 1);
+      } else {
+        // Don't clear existing tasks on error
+        setError(err.message + ' — showing cached tasks.');
+      }
     } finally {
       setLoading(false);
     }
@@ -31,15 +44,34 @@ function App() {
   const handleAdd = async (taskData) => {
     try {
       const newTask = await createTask(taskData);
-      setTasks((prev) => [newTask, ...prev]);
+      const tasks = await getTasks();
+      // New task goes to bottom, save that order
+      await reorderTasks(tasks.map((t) => t.id));
+      setTasks(tasks);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+  
+  const handleReorder = async (reorderedTasks) => {
+    setIsManualOrder(true);
+    setTasks(reorderedTasks);
+    try {
+      await reorderTasks(reorderedTasks.map((t) => t.id));
     } catch (err) {
       setError(err.message);
     }
   };
 
-  const handleReorder = (reorderedTasks) => {
-    setIsManualOrder(true);
-    setTasks(reorderedTasks);
+  const handleReset = async () => {
+    setIsManualOrder(false);
+    try {
+      await reorderTasks([]);
+      const data = await getTasks();
+      setTasks(data);
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleToggle = async (id, completed) => {
@@ -79,18 +111,13 @@ function App() {
       t.title.toLowerCase().includes(search.toLowerCase())
     )
     .sort((a, b) => {
-      // If searching, prioritize title starts-with matches first
       if (search) {
         const aStarts = a.title.toLowerCase().startsWith(search.toLowerCase());
         const bStarts = b.title.toLowerCase().startsWith(search.toLowerCase());
         if (aStarts && !bStarts) return -1;
         if (!aStarts && bStarts) return 1;
       }
-
-      // If user manually reordered, respect that order
       if (isManualOrder) return 0;
-
-      // Default: sort by due date (earliest first, no due date at bottom)
       if (!a.dueDate && !b.dueDate) return 0;
       if (!a.dueDate) return 1;
       if (!b.dueDate) return -1;
@@ -114,12 +141,20 @@ function App() {
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 rounded-lg px-4 py-3 mb-4 text-sm flex justify-between items-center">
             <span>⚠ {error}</span>
-            <button
-              onClick={() => setError('')}
-              className="ml-4 font-bold hover:text-red-800"
-            >
-              ✕
-            </button>
+            <div className="flex gap-3 ml-4">
+              <button
+                onClick={() => { setError(''); fetchTasks(); }}
+                className="font-medium underline hover:text-red-800"
+              >
+                Retry
+              </button>
+              <button
+                onClick={() => setError('')}
+                className="font-bold hover:text-red-800"
+              >
+                ✕
+              </button>
+            </div>
           </div>
         )}
 
@@ -141,7 +176,7 @@ function App() {
           <span>{isManualOrder ? '📌 Custom order' : '📅 Sorted by due date'}</span>
           {isManualOrder && (
             <button
-              onClick={() => setIsManualOrder(false)}
+              onClick={handleReset}
               className="text-blue-400 hover:text-blue-600 transition"
             >
               Reset to due date order
@@ -154,6 +189,11 @@ function App() {
           <div className="text-center py-16 text-gray-400">
             <p className="text-4xl mb-3">⏳</p>
             <p>Loading tasks...</p>
+            {slowLoad && (
+              <p className="text-xs mt-2 text-gray-300">
+                Server is waking up, this may take up to 30 seconds...
+              </p>
+            )}
           </div>
         ) : (
           <TaskList

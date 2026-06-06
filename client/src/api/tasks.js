@@ -50,3 +50,12 @@ export const deleteTask = async (id) => {
     throw new Error(getErrorMessage(err));
   }
 };
+
+export const reorderTasks = async (orderedIds) => {
+  try {
+    const response = await api.post('/reorder', { orderedIds });
+    return response.data;
+  } catch (err) {
+    throw new Error(getErrorMessage(err));
+  }
+};
