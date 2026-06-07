@@ -30,10 +30,8 @@ function App() {
       setIsManualOrder(hasManualOrder);
     } catch (err) {
       if (retryCount < 1) {
-        console.log('Retrying fetch...');
         fetchTasks(retryCount + 1);
       } else {
-        // Don't clear existing tasks on error
         setError(err.message + ' — showing cached tasks.');
       }
     } finally {
@@ -43,52 +41,44 @@ function App() {
 
   const handleAdd = async (taskData) => {
     try {
-      const newTask = await createTask(taskData);
-      const tasks = await getTasks();
-      // New task goes to bottom, save that order
-      await reorderTasks(tasks.map((t) => t.id));
-      setTasks(tasks);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-  
-  const handleAdd = async (taskData) => {
-    try {
       await createTask(taskData);
       const data = await getTasks();
-    
-      // Find the new task (it has no order field)
-      const newTask = data.find((t) => t.order === undefined);
+
+      // Find newest task (just created)
+      const newTask = data.reduce((latest, t) =>
+        new Date(t.createdAt) > new Date(latest.createdAt) ? t : latest
+      );
+
       const existingTasks = data
-        .filter((t) => t.order !== undefined)
-        .sort((a, b) => a.order - b.order);
+        .filter((t) => t.id !== newTask.id)
+        .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
 
-      if (!newTask || !isManualOrder) {
-        setTasks(data);
-        return;
-      }
-
-      // Find where new task fits by due date among existing tasks
+      // Find where new task fits by due date
       let insertIndex = existingTasks.length;
       for (let i = 0; i < existingTasks.length; i++) {
-        const existing = existingTasks[i];
-        if (!existing.dueDate) continue;
+        if (!existingTasks[i].dueDate) continue;
         if (!newTask.dueDate) break;
-        if (new Date(newTask.dueDate) < new Date(existing.dueDate)) {
+        if (new Date(newTask.dueDate) < new Date(existingTasks[i].dueDate)) {
           insertIndex = i;
           break;
         }
       }
 
-      // Insert new task at correct position
       existingTasks.splice(insertIndex, 0, newTask);
-    
-      // Save new order
       await reorderTasks(existingTasks.map((t) => t.id));
       const updated = await getTasks();
       setTasks(updated);
       setIsManualOrder(true);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleReorder = async (reorderedTasks) => {
+    setIsManualOrder(true);
+    setTasks(reorderedTasks);
+    try {
+      await reorderTasks(reorderedTasks.map((t) => t.id));
     } catch (err) {
       setError(err.message);
     }
@@ -162,13 +152,11 @@ function App() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-2xl mx-auto px-4 py-10">
 
-        {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-gray-800">Task Manager</h1>
           <p className="text-gray-400 text-sm mt-1">Stay organised, stay productive</p>
         </div>
 
-        {/* Error banner */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 rounded-lg px-4 py-3 mb-4 text-sm flex justify-between items-center">
             <span>⚠ {error}</span>
@@ -189,10 +177,8 @@ function App() {
           </div>
         )}
 
-        {/* Add task form */}
         <TaskForm onAdd={handleAdd} />
 
-        {/* Filter + search */}
         <FilterBar
           filter={filter}
           setFilter={setFilter}
@@ -202,7 +188,6 @@ function App() {
           completedCount={completedCount}
         />
 
-        {/* Sort indicator */}
         <div className="flex justify-between items-center mb-3 text-xs text-gray-400">
           <span>{isManualOrder ? '📌 Custom order' : '📅 Sorted by due date'}</span>
           {isManualOrder && (
@@ -215,7 +200,6 @@ function App() {
           )}
         </div>
 
-        {/* Task list */}
         {loading ? (
           <div className="text-center py-16 text-gray-400">
             <p className="text-4xl mb-3">⏳</p>
