@@ -53,11 +53,42 @@ function App() {
     }
   };
   
-  const handleReorder = async (reorderedTasks) => {
-    setIsManualOrder(true);
-    setTasks(reorderedTasks);
+  const handleAdd = async (taskData) => {
     try {
-      await reorderTasks(reorderedTasks.map((t) => t.id));
+      await createTask(taskData);
+      const data = await getTasks();
+    
+      // Find the new task (it has no order field)
+      const newTask = data.find((t) => t.order === undefined);
+      const existingTasks = data
+        .filter((t) => t.order !== undefined)
+        .sort((a, b) => a.order - b.order);
+
+      if (!newTask || !isManualOrder) {
+        setTasks(data);
+        return;
+      }
+
+      // Find where new task fits by due date among existing tasks
+      let insertIndex = existingTasks.length;
+      for (let i = 0; i < existingTasks.length; i++) {
+        const existing = existingTasks[i];
+        if (!existing.dueDate) continue;
+        if (!newTask.dueDate) break;
+        if (new Date(newTask.dueDate) < new Date(existing.dueDate)) {
+          insertIndex = i;
+          break;
+        }
+      }
+
+      // Insert new task at correct position
+      existingTasks.splice(insertIndex, 0, newTask);
+    
+      // Save new order
+      await reorderTasks(existingTasks.map((t) => t.id));
+      const updated = await getTasks();
+      setTasks(updated);
+      setIsManualOrder(true);
     } catch (err) {
       setError(err.message);
     }
